@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; script-src-elem 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; script-src-attr 'none'; style-src-attr 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; manifest-src 'none'; connect-src 'none'; prefetch-src 'none'; navigate-to 'self'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'none'; upgrade-insecure-requests;">
+  <title>Clipboard Cleaner</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0f0f0f;
+      --bg-secondary: #1a1a1a;
+      --bg-tertiary: #252525;
+      --bg-input: #1e1e1e;
+      --text-primary: #f0f0f0;
+      --text-secondary: #a0a0a0;
+      --text-muted: #666;
+      --accent: #6b8afd;
+      --accent-hover: #8aa2ff;
+      --accent-active: #5474e8;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --error: #f87171;
+      --border: #333;
+      --border-focus: #6b8afd;
+      --radius: 8px;
+      --radius-sm: 4px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.4);
+      --transition: 0.15s ease;
+    }
+
+    html {
+      font-size: 16px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    header {
+      text-align: center;
+      padding: 1.5rem 0 1rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .controls-section {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (min-width: 1200px) {
+      .main-grid {
+        grid-template-columns: 1fr auto 1fr;
+      }
+      .controls-section {
+        grid-column: auto;
+        max-width: 320px;
+      }
+    }
+
+    .panel {
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .panel-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+    }
+
+    .panel-stats {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .panel-body {
+      padding: 1rem;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 300px;
+      max-height: 60vh;
+      resize: vertical;
+      background: var(--bg-input);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      transition: border-color var(--transition);
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--border-focus);
+    }
+
+    textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    textarea[readonly] {
+      background: var(--bg-tertiary);
+      cursor: default;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+      min-height: 44px;
+      min-width: 44px;
+      font-family: inherit;
+    }
+
+    .btn:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      background: var(--accent-active);
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #333;
+      border-color: #444;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #000;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #5ee98d;
+    }
+
+    .btn-preset {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      flex: 1;
+      min-width: 100px;
+    }
+
+    .btn-preset:hover:not(:disabled) {
+      background: #333;
+      border-color: var(--accent);
+    }
+
+    .btn-preset.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .preset-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 1rem 0 0.5rem;
+      padding-bottom: 0.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title:first-child {
+      margin-top: 0;
+    }
+
+    .toggle-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0;
+    }
+
+    .toggle-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .toggle-item label {
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      cursor: pointer;
+      user-select: none;
+      line-height: 1.3;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .output-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+
+    .status-area {
+      min-height: 2.5rem;
+      padding: 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      background: var(--bg-tertiary);
+    }
+
+    .status-area.success {
+      background: rgba(74, 222, 128, 0.15);
+      color: var(--success);
+    }
+
+    .status-area.error {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--error);
+    }
+
+    .status-area.warning {
+      background: rgba(251, 191, 36, 0.15);
+      color: var(--warning);
+    }
+
+    .status-area.info {
+      background: rgba(107, 138, 253, 0.15);
+      color: var(--accent);
+    }
+
+    .settings-section {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .pending-indicator {
+      font-size: 0.75rem;
+      color: var(--warning);
+      margin-left: 0.5rem;
+    }
+
+    footer {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    footer p {
+      margin: 0 0 0.75rem;
+    }
+
+    footer p:last-child {
+      margin-bottom: 0;
+    }
+
+    footer strong {
+      color: var(--text-primary);
+    }
+
+    .footer-list {
+      margin: 0.5rem 0;
+      padding-left: 1.25rem;
+    }
+
+    .footer-list li {
+      margin: 0.25rem 0;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 0.75rem;
+      }
+      
+      h1 {
+        font-size: 1.4rem;
+      }
+      
+      textarea {
+        min-height: 200px;
+      }
+      
+      .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+      }
+      
+      .btn-preset {
+        min-width: 70px;
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📋 Clipboard Cleaner</h1>
+      <p class="subtitle">Paste messy text, get clean output. 100% local, no uploads.</p>
+    </header>
+
+    <main class="main-grid" id="main-grid">
+      <!-- Panels built via JavaScript -->
+    </main>
+  </div>
+
+  <footer>
+    <p><strong>Privacy Notice:</strong> This tool processes text locally in your browser. It does not upload your text to any server. No external libraries are loaded. Your text and data are never transmitted anywhere.</p>
+    <p><strong>Transparency:</strong></p>
+    <ul class="footer-list">
+      <li>✓ No uploads</li>
+      <li>✓ No cookies or tracking</li>
+      <li>✓ No account required</li>
+      <li>✓ No background network requests</li>
+      <li>✓ No fetch/XHR/WebSocket/beacon calls</li>
+      <li>✓ No analytics, no beacons, no telemetry</li>
+    </ul>
+  </footer>
+
+  <script>
+    (function() {
+      'use strict';
+
+      // Constants
+      const MAX_INPUT_CHARS = 5 * 1024 * 1024; // ~5MB as char count (rough)
+      const WARN_INPUT_CHARS = 2 * 1024 * 1024; // ~2MB
+      const MAX_HISTORY = 20;
+      const STORAGE_KEY = 'clipboard-cleaner-settings';
+      const STATS_DEBOUNCE_MS = 150;
+
+      // State
+      let inputText = '';
+      let outputText = '';
+      let history = [];
+      let historyIndex = -1;
+      let activePreset = 'docs';
+      let rememberSettings = false;
+      let settingsChanged = false;
+      let statsDebounceTimer = null;
+
+      // Default settings for each preset
+      const presets = {
+        docs: {
+          unwrapLines: true,
+          normalizeWhitespace: true,
+          normalizeNewlines: true,
+          stripInvisibles: true,
+          preserveIndentBlocks: true,
+          preserveLists: true,
+          straightenQuotes: false,
+          straightenDashes: false,
+          normalizeBullets: false,
+          tabsToSpaces: false,
+          removeDuplicateLines: false
+        },
+        markdown: {
+          unwrapLines: false,
+          normalizeWhitespace: true,
+          normalizeNewlines: true,
+          stripInvisibles: true,
+          preserveIndentBlocks: true,
+          preserveLists: true,
+          straightenQuotes: false,
+          straightenDashes: false,
+          normalizeBullets: true,
+          tabsToSpaces: false,
+          removeDuplicateLines: false
+        },
+        ascii: {
+          unwrapLines: true,
+          normalizeWhitespace: true,
+          normalizeNewlines: true,
+          stripInvisibles: true,
+          preserveIndentBlocks: false,
+          preserveLists: true,
+          straightenQuotes: true,
+          straightenDashes: true,
+          normalizeBullets: true,
+          tabsToSpaces: true,
+          removeDuplicateLines: false
+        },
+        compact: {
+          unwrapLines: true,
+          normalizeWhitespace: true,
+          normalizeNewlines: true,
+          stripInvisibles: true,
+          preserveIndentBlocks: false,
+          preserveLists: false,
+          straightenQuotes: true,
+          straightenDashes: true,
+          normalizeBullets: false,
+          tabsToSpaces: true,
+          removeDuplicateLines: true
+        }
+      };
+
+      // Current settings
+      let settings = { ...presets.docs };
+
+      // DOM references
+      let inputTextarea, outputTextarea, statusArea;
+      let inputStats, outputStats;
+      let presetButtons = {};
+      let toggles = {};
+      let undoBtn, redoBtn, copyBtn, downloadBtn, applyBtn;
+      let pendingIndicator;
+
+      // Initialize
+      function init() {
+        loadSettings();
+        buildUI();
+        attachEvents();
+        updateUI();
+      }
+
+      // Build UI via DOM APIs
+      function buildUI() {
+        const mainGrid = document.getElementById('main-grid');
+        mainGrid.textContent = '';
+
+        // Input Panel
+        const inputPanel = createPanel('Input', buildInputStats());
+        inputTextarea = document.createElement('textarea');
+        inputTextarea.id = 'input-text';
+        inputTextarea.placeholder = 'Paste text here...';
+        inputTextarea.setAttribute('aria-label', 'Input text');
+        inputPanel.body.appendChild(inputTextarea);
+        mainGrid.appendChild(inputPanel.panel);
+
+        // Controls Panel
+        const controlsPanel = createPanel('Controls');
+        controlsPanel.panel.classList.add('controls-section');
+        buildControls(controlsPanel.body);
+        mainGrid.appendChild(controlsPanel.panel);
+
+        // Output Panel
+        const outputPanel = createPanel('Output', buildOutputStats());
+        outputTextarea = document.createElement('textarea');
+        outputTextarea.id = 'output-text';
+        outputTextarea.readOnly = true;
+        outputTextarea.placeholder = 'Cleaned output will appear here...';
+        outputTextarea.setAttribute('aria-label', 'Cleaned output');
+        outputPanel.body.appendChild(outputTextarea);
+
+        // Output actions
+        const outputActions = document.createElement('div');
+        outputActions.className = 'output-actions';
+
+        copyBtn = createButton('📋 Copy', 'btn btn-success', handleCopy);
+        copyBtn.id = 'copy-btn';
+
+        const selectAllBtn = createButton('Select All', 'btn btn-secondary', handleSelectAll);
+        
+        downloadBtn = createButton('⬇ Download .txt', 'btn btn-secondary', handleDownload);
+        downloadBtn.id = 'download-btn';
+
+        outputActions.appendChild(copyBtn);
+        outputActions.appendChild(selectAllBtn);
+        outputActions.appendChild(downloadBtn);
+        outputPanel.body.appendChild(outputActions);
+
+        // Status area
+        statusArea = document.createElement('div');
+        statusArea.className = 'status-area info';
+        statusArea.setAttribute('role', 'status');
+        statusArea.setAttribute('aria-live', 'polite');
+        statusArea.textContent = 'Paste text and click Apply to clean.';
+        outputPanel.body.appendChild(statusArea);
+
+        mainGrid.appendChild(outputPanel.panel);
+      }
+
+      function createPanel(title, statsElement) {
+        const panel = document.createElement('section');
+        panel.className = 'panel';
+
+        const header = document.createElement('div');
+        header.className = 'panel-header';
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'panel-title';
+        titleEl.textContent = title;
+        header.appendChild(titleEl);
+
+        if (statsElement) {
+          header.appendChild(statsElement);
+        }
+
+        const body = document.createElement('div');
+        body.className = 'panel-body';
+
+        panel.appendChild(header);
+        panel.appendChild(body);
+
+        return { panel, body, header };
+      }
+
+      function buildInputStats() {
+        inputStats = document.createElement('div');
+        inputStats.className = 'panel-stats';
+        inputStats.setAttribute('aria-label', 'Input statistics');
+        updateInputStats();
+        return inputStats;
+      }
+
+      function buildOutputStats() {
+        outputStats = document.createElement('div');
+        outputStats.className = 'panel-stats';
+        outputStats.setAttribute('aria-label', 'Output statistics');
+        updateOutputStats();
+        return outputStats;
+      }
+
+      function buildControls(container) {
+        // Presets section
+        const presetTitle = document.createElement('div');
+        presetTitle.className = 'section-title';
+        presetTitle.textContent = 'Presets';
+        container.appendChild(presetTitle);
+
+        const presetRow = document.createElement('div');
+        presetRow.className = 'preset-row';
+
+        const presetData = [
+          { id: 'docs', label: '📄 Docs' },
+          { id: 'markdown', label: '📝 Markdown' },
+          { id: 'ascii', label: '🔤 ASCII' },
+          { id: 'compact', label: '📦 Compact' }
+        ];
+
+        presetData.forEach(function(p) {
+          const btn = createButton(p.label, 'btn btn-preset', function() { applyPreset(p.id); });
+          btn.id = 'preset-' + p.id;
+          presetButtons[p.id] = btn;
+          presetRow.appendChild(btn);
+        });
+        container.appendChild(presetRow);
+
+        // Line handling
+        const lineTitle = document.createElement('div');
+        lineTitle.className = 'section-title';
+        lineTitle.textContent = 'Line Handling';
+        container.appendChild(lineTitle);
+
+        const lineGroup = document.createElement('div');
+        lineGroup.className = 'toggle-group';
+        lineGroup.appendChild(createToggle('unwrapLines', 'Unwrap hard line breaks'));
+        lineGroup.appendChild(createToggle('preserveIndentBlocks', 'Preserve indented blocks'));
+        lineGroup.appendChild(createToggle('preserveLists', 'Preserve list formatting'));
+        container.appendChild(lineGroup);
+
+        // Whitespace
+        const wsTitle = document.createElement('div');
+        wsTitle.className = 'section-title';
+        wsTitle.textContent = 'Whitespace';
+        container.appendChild(wsTitle);
+
+        const wsGroup = document.createElement('div');
+        wsGroup.className = 'toggle-group';
+        wsGroup.appendChild(createToggle('normalizeWhitespace', 'Normalize spaces'));
+        wsGroup.appendChild(createToggle('normalizeNewlines', 'Normalize newlines'));
+        wsGroup.appendChild(createToggle('stripInvisibles', 'Strip invisible characters'));
+        wsGroup.appendChild(createToggle('tabsToSpaces', 'Convert tabs to spaces'));
+        container.appendChild(wsGroup);
+
+        // Punctuation
+        const punctTitle = document.createElement('div');
+        punctTitle.className = 'section-title';
+        punctTitle.textContent = 'Punctuation';
+        container.appendChild(punctTitle);
+
+        const punctGroup = document.createElement('div');
+        punctGroup.className = 'toggle-group';
+        punctGroup.appendChild(createToggle('straightenQuotes', 'Straighten curly quotes'));
+        punctGroup.appendChild(createToggle('straightenDashes', 'Convert dashes to hyphens'));
+        punctGroup.appendChild(createToggle('normalizeBullets', 'Normalize bullet characters'));
+        container.appendChild(punctGroup);
+
+        // Other
+        const otherTitle = document.createElement('div');
+        otherTitle.className = 'section-title';
+        otherTitle.textContent = 'Other';
+        container.appendChild(otherTitle);
+
+        const otherGroup = document.createElement('div');
+        otherGroup.className = 'toggle-group';
+        otherGroup.appendChild(createToggle('removeDuplicateLines', 'Remove duplicate lines'));
+        container.appendChild(otherGroup);
+
+        // Action buttons
+        const actionRow = document.createElement('div');
+        actionRow.className = 'action-row';
+
+        applyBtn = createButton('▶ Apply', 'btn btn-primary', handleApply);
+        applyBtn.id = 'apply-btn';
+        
+        pendingIndicator = document.createElement('span');
+        pendingIndicator.className = 'pending-indicator';
+        pendingIndicator.textContent = '';
+        pendingIndicator.setAttribute('aria-live', 'polite');
+
+        undoBtn = createButton('↩ Undo', 'btn btn-secondary', handleUndo);
+        undoBtn.id = 'undo-btn';
+        redoBtn = createButton('↪ Redo', 'btn btn-secondary', handleRedo);
+        redoBtn.id = 'redo-btn';
+        const resetBtn = createButton('🔄 Reset', 'btn btn-secondary', handleReset);
+
+        actionRow.appendChild(applyBtn);
+        actionRow.appendChild(pendingIndicator);
+        actionRow.appendChild(undoBtn);
+        actionRow.appendChild(redoBtn);
+        actionRow.appendChild(resetBtn);
+        container.appendChild(actionRow);
+
+        // Settings section
+        const settingsSection = document.createElement('div');
+        settingsSection.className = 'settings-section';
+
+        const settingsRow = document.createElement('div');
+        settingsRow.className = 'settings-row';
+
+        const rememberToggle = createToggle('rememberSettings', 'Remember my settings', true);
+        settingsRow.appendChild(rememberToggle);
+
+        const clearDataBtn = createButton('Clear Data', 'btn btn-secondary', handleClearData);
+        clearDataBtn.style.marginLeft = 'auto';
+        settingsRow.appendChild(clearDataBtn);
+
+        settingsSection.appendChild(settingsRow);
+        container.appendChild(settingsSection);
+      }
+
+      function createButton(text, className, handler) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = className;
+        btn.textContent = text;
+        btn.addEventListener('click', handler);
+        return btn;
+      }
+
+      function createToggle(id, label, isSettings) {
+        const item = document.createElement('div');
+        item.className = 'toggle-item';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = 'toggle-' + id;
+        checkbox.checked = isSettings ? rememberSettings : settings[id];
+
+        const labelEl = document.createElement('label');
+        labelEl.setAttribute('for', 'toggle-' + id);
+        labelEl.textContent = label;
+
+        item.appendChild(checkbox);
+        item.appendChild(labelEl);
+
+        if (isSettings) {
+          checkbox.addEventListener('change', function() {
+            rememberSettings = this.checked;
+            if (rememberSettings) {
+              saveSettings();
+            } else {
+              clearStorage();
+            }
+          });
+        } else {
+          toggles[id] = checkbox;
+          checkbox.addEventListener('change', function() {
+            settings[id] = this.checked;
+            activePreset = null;
+            settingsChanged = true;
+            updatePresetButtons();
+            updatePendingIndicator();
+            if (rememberSettings) saveSettings();
+          });
+        }
+
+        return item;
+      }
+
+      function attachEvents() {
+        inputTextarea.addEventListener('input', handleInput);
+        inputTextarea.addEventListener('paste', function() {
+          setTimeout(handleInput, 0);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+          const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+          const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+          if (modKey && e.key === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            handleUndo();
+          } else if (modKey && e.key === 'z' && e.shiftKey) {
+            e.preventDefault();
+            handleRedo();
+          } else if (modKey && e.shiftKey && e.key === 'Z') {
+            e.preventDefault();
+            handleRedo();
+          } else if (modKey && e.key === 'Enter') {
+            e.preventDefault();
+            handleApply();
+          }
+        });
+      }
+
+      function handleInput() {
+        const value = inputTextarea.value;
+        
+        // Size check using string length (fast, good approximation)
+        if (value.length > MAX_INPUT_CHARS) {
+          showStatus('Input too large (max ~5MB). Please reduce text size.', 'error');
+          return;
+        }
+        
+        if (value.length > WARN_INPUT_CHARS) {
+          showStatus('Large input detected. Processing may take a moment.', 'warning');
+        } else if (!value.trim()) {
+          showStatus('Paste text and click Apply to clean.', 'info');
+        } else {
+          showStatus('Ready. Click Apply to clean text.', 'info');
+        }
+
+        inputText = value;
+        settingsChanged = true;
+        
+        // Debounced stats update
+        if (statsDebounceTimer) {
+          clearTimeout(statsDebounceTimer);
+        }
+        statsDebounceTimer = setTimeout(function() {
+          updateInputStats();
+          updatePendingIndicator();
+        }, STATS_DEBOUNCE_MS);
+      }
+
+      function handleApply() {
+        if (!inputText.trim()) {
+          showStatus('Paste text to begin.', 'info');
+          return;
+        }
+
+        // Push current state to history before processing
+        pushHistory();
+
+        // Process the text
+        processText();
+        
+        settingsChanged = false;
+        updatePendingIndicator();
+      }
+
+      function processText() {
+        let text = inputText;
+
+        // Normalize line endings first
+        text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+        // Strip invisible characters
+        if (settings.stripInvisibles) {
+          // BOM, zero-width spaces, etc.
+          text = text.replace(/[\uFEFF\u200B\u200C\u200D\u2060]/g, '');
+          // Replace non-breaking spaces with regular spaces
+          text = text.replace(/\u00A0/g, ' ');
+        }
+
+        // Tabs to spaces
+        if (settings.tabsToSpaces) {
+          text = text.replace(/\t/g, '    ');
+        }
+
+        // Straighten curly quotes (FIXED: actual Unicode curly quotes)
+        if (settings.straightenQuotes) {
+          // Left/right double quotes → straight double quote
+          text = text.replace(/[\u201C\u201D]/g, '"');
+          // Left/right single quotes → straight single quote/apostrophe
+          text = text.replace(/[\u2018\u2019]/g, "'");
+        }
+
+        // Straighten dashes (en-dash, em-dash, horizontal bar)
+        if (settings.straightenDashes) {
+          text = text.replace(/[\u2013\u2014\u2015]/g, '-');
+          // Ellipsis to three dots
+          text = text.replace(/\u2026/g, '...');
+        }
+
+        // Normalize bullets (FIXED: removed dashes, only actual bullet characters)
+        if (settings.normalizeBullets) {
+          // Only convert actual bullet symbols, not dashes
+          text = text.replace(/^[\u2022\u2023\u2043\u25E6\u25AA\u25AB\u25CF\u25CB\u25A0\u25A1\u2981\u26AB]\s*/gm, '- ');
+        }
+
+        // Process lines
+        let lines = text.split('\n');
+
+        // Unwrap hard line breaks (smart paragraph joining)
+        if (settings.unwrapLines) {
+          lines = unwrapLines(lines);
+        }
+
+        // Normalize whitespace per line
+        if (settings.normalizeWhitespace) {
+          lines = lines.map(function(line) {
+            // Preserve leading whitespace for indented blocks
+            const leadingMatch = line.match(/^(\s*)/);
+            const leading = leadingMatch ? leadingMatch[1] : '';
+            const rest = line.slice(leading.length);
+            // Collapse multiple spaces to one, trim trailing
+            return leading + rest.replace(/  +/g, ' ').trimEnd();
+          });
+        }
+
+        // Normalize newlines (collapse 3+ blank lines to 2)
+        if (settings.normalizeNewlines) {
+          text = lines.join('\n');
+          text = text.replace(/\n{3,}/g, '\n\n');
+          lines = text.split('\n');
+        }
+
+        // Remove duplicate lines
+        if (settings.removeDuplicateLines) {
+          const seen = new Set();
+          lines = lines.filter(function(line) {
+            const trimmed = line.trim();
+            if (trimmed === '' || !seen.has(trimmed)) {
+              if (trimmed !== '') seen.add(trimmed);
+              return true;
+            }
+            return false;
+          });
+        }
+
+        outputText = lines.join('\n').trim();
+        outputTextarea.value = outputText;
+        updateOutputStats();
+        
+        if (outputText) {
+          showStatus('Text cleaned successfully. ✓', 'success');
+        }
+        updateButtonStates();
+      }
+
+      function unwrapLines(lines) {
+        const result = [];
+        let buffer = '';
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const nextLine = lines[i + 1] || '';
+          const trimmedLine = line.trim();
+          const trimmedNext = nextLine.trim();
+
+          // Check if this is an indented block (code-like)
+          const isIndented = settings.preserveIndentBlocks && /^(\s{4,}|\t)/.test(line);
+          
+          // Check if this is a list item (bullets or numbered)
+          // FIXED: More conservative list detection
+          const listPattern = /^(\s*)([*\-+]|\d+[.)]|\(\d+\))\s/;
+          const isListItem = settings.preserveLists && listPattern.test(line);
+          const nextIsListItem = settings.preserveLists && listPattern.test(nextLine);
+
+          // Empty line = paragraph break
+          if (trimmedLine === '') {
+            if (buffer) {
+              result.push(buffer);
+              buffer = '';
+            }
+            result.push('');
+            continue;
+          }
+
+          // Indented blocks don't get joined
+          if (isIndented) {
+            if (buffer) {
+              result.push(buffer);
+              buffer = '';
+            }
+            result.push(line);
+            continue;
+          }
+
+          // List items don't get joined across items
+          if (isListItem) {
+            if (buffer) {
+              result.push(buffer);
+              buffer = '';
+            }
+            buffer = trimmedLine;
+            continue;
+          }
+
+          // Check if we should join with next line
+          const endsWithSentence = /[.!?:;]$/.test(trimmedLine);
+          const nextStartsLower = /^[a-z]/.test(trimmedNext);
+          const nextIsEmpty = trimmedNext === '';
+          const nextIsIndented = settings.preserveIndentBlocks && /^(\s{4,}|\t)/.test(nextLine);
+
+          // Should we continue the paragraph?
+          const shouldJoin = !nextIsEmpty && 
+                            !nextIsListItem && 
+                            !nextIsIndented &&
+                            (!endsWithSentence || nextStartsLower);
+
+          if (buffer) {
+            buffer += ' ' + trimmedLine;
+          } else {
+            buffer = trimmedLine;
+          }
+
+          if (!shouldJoin) {
+            result.push(buffer);
+            buffer = '';
+          }
+        }
+
+        if (buffer) {
+          result.push(buffer);
+        }
+
+        return result;
+      }
+
+      function applyPreset(presetId) {
+        activePreset = presetId;
+        settings = { ...presets[presetId] };
+        settingsChanged = true;
+        updateToggles();
+        updatePresetButtons();
+        updatePendingIndicator();
+        if (rememberSettings) saveSettings();
+        
+        // Auto-apply when selecting a preset (convenient UX)
+        if (inputText.trim()) {
+          handleApply();
+        }
+      }
+
+      function updateToggles() {
+        Object.keys(toggles).forEach(function(key) {
+          toggles[key].checked = settings[key];
+        });
+      }
+
+      function updatePresetButtons() {
+        Object.keys(presetButtons).forEach(function(key) {
+          if (key === activePreset) {
+            presetButtons[key].classList.add('active');
+          } else {
+            presetButtons[key].classList.remove('active');
+          }
+        });
+      }
+
+      function updatePendingIndicator() {
+        if (!pendingIndicator) return;
+        if (settingsChanged && inputText.trim() && outputText) {
+          pendingIndicator.textContent = '(changes pending)';
+        } else {
+          pendingIndicator.textContent = '';
+        }
+      }
+
+      function pushHistory() {
+        // Remove any future states if we're in the middle of history
+        if (historyIndex < history.length - 1) {
+          history = history.slice(0, historyIndex + 1);
+        }
+
+        // Add current state
+        history.push({
+          input: inputText,
+          output: outputText,
+          settings: { ...settings },
+          activePreset: activePreset
+        });
+
+        // Limit history size
+        if (history.length > MAX_HISTORY) {
+          history.shift();
+        } else {
+          historyIndex = history.length - 1;
+        }
+
+        updateButtonStates();
+      }
+
+      function handleUndo() {
+        if (historyIndex > 0) {
+          historyIndex--;
+          restoreState(history[historyIndex]);
+          showStatus('Undone.', 'info');
+        }
+      }
+
+      function handleRedo() {
+        if (historyIndex < history.length - 1) {
+          historyIndex++;
+          restoreState(history[historyIndex]);
+          showStatus('Redone.', 'info');
+        }
+      }
+
+      function restoreState(state) {
+        inputText = state.input;
+        inputTextarea.value = inputText;
+        outputText = state.output;
+        outputTextarea.value = outputText;
+        settings = { ...state.settings };
+        activePreset = state.activePreset;
+        settingsChanged = false;
+        
+        updateToggles();
+        updatePresetButtons();
+        updateInputStats();
+        updateOutputStats();
+        updateButtonStates();
+        updatePendingIndicator();
+      }
+
+      function handleReset() {
+        if (!inputText && !outputText && activePreset === 'docs') return;
+        
+        inputText = '';
+        inputTextarea.value = '';
+        outputText = '';
+        outputTextarea.value = '';
+        history = [];
+        historyIndex = -1;
+        settingsChanged = false;
+        
+        activePreset = 'docs';
+        settings = { ...presets.docs };
+        
+        updateToggles();
+        updatePresetButtons();
+        updateInputStats();
+        updateOutputStats();
+        updateButtonStates();
+        updatePendingIndicator();
+        showStatus('Reset to defaults.', 'info');
+      }
+
+      async function handleCopy() {
+        if (!outputText) {
+          showStatus('Nothing to copy.', 'warning');
+          return;
+        }
+
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(outputText);
+            showStatus('Copied to clipboard! ✓', 'success');
+          } else {
+            // Fallback
+            outputTextarea.select();
+            outputTextarea.setSelectionRange(0, 99999);
+            const success = document.execCommand('copy');
+            if (success) {
+              showStatus('Copied to clipboard! ✓', 'success');
+            } else {
+              throw new Error('execCommand failed');
+            }
+          }
+        } catch (err) {
+          console.error('Clipboard write failed:', err);
+          showStatus('Copy failed. Use "Select All" and copy manually (Ctrl/Cmd+C).', 'error');
+        }
+      }
+
+      function handleSelectAll() {
+        outputTextarea.focus();
+        outputTextarea.select();
+        outputTextarea.setSelectionRange(0, 99999);
+        showStatus('Text selected. Press Ctrl/Cmd+C to copy.', 'info');
+      }
+
+      function handleDownload() {
+        if (!outputText) {
+          showStatus('Nothing to download.', 'warning');
+          return;
+        }
+
+        try {
+          const blob = new Blob([outputText], { type: 'text/plain;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'cleaned-text.txt';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          
+          // Revoke after short delay to ensure download starts
+          setTimeout(function() {
+            URL.revokeObjectURL(url);
+          }, 100);
+          
+          showStatus('Download started. ✓', 'success');
+        } catch (err) {
+          console.error('Download failed:', err);
+          showStatus('Download failed. Please try again.', 'error');
+        }
+      }
+
+      function handleClearData() {
+        clearStorage();
+        rememberSettings = false;
+        const rememberToggle = document.getElementById('toggle-rememberSettings');
+        if (rememberToggle) rememberToggle.checked = false;
+        showStatus('Stored data cleared.', 'success');
+      }
+
+      function updateInputStats() {
+        if (!inputStats) return;
+        const text = inputText || '';
+        const chars = text.length;
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const lines = text ? text.split('\n').length : 0;
+        
+        inputStats.textContent = '';
+        
+        const charSpan = document.createElement('span');
+        charSpan.textContent = chars.toLocaleString() + ' chars';
+        const wordSpan = document.createElement('span');
+        wordSpan.textContent = words.toLocaleString() + ' words';
+        const lineSpan = document.createElement('span');
+        lineSpan.textContent = lines.toLocaleString() + ' lines';
+        
+        inputStats.appendChild(charSpan);
+        inputStats.appendChild(wordSpan);
+        inputStats.appendChild(lineSpan);
+      }
+
+      function updateOutputStats() {
+        if (!outputStats) return;
+        const text = outputText || '';
+        const chars = text.length;
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const lines = text ? text.split('\n').length : 0;
+        
+        outputStats.textContent = '';
+        
+        const charSpan = document.createElement('span');
+        charSpan.textContent = chars.toLocaleString() + ' chars';
+        const wordSpan = document.createElement('span');
+        wordSpan.textContent = words.toLocaleString() + ' words';
+        const lineSpan = document.createElement('span');
+        lineSpan.textContent = lines.toLocaleString() + ' lines';
+        
+        outputStats.appendChild(charSpan);
+        outputStats.appendChild(wordSpan);
+        outputStats.appendChild(lineSpan);
+      }
+
+      function updateButtonStates() {
+        if (undoBtn) {
+          undoBtn.disabled = historyIndex <= 0;
+        }
+        if (redoBtn) {
+          redoBtn.disabled = historyIndex >= history.length - 1;
+        }
+        if (copyBtn) {
+          copyBtn.disabled = !outputText;
+        }
+        if (downloadBtn) {
+          downloadBtn.disabled = !outputText;
+        }
+        if (applyBtn) {
+          applyBtn.disabled = !inputText.trim();
+        }
+      }
+
+      function showStatus(message, type) {
+        if (!statusArea) return;
+        statusArea.textContent = message;
+        statusArea.className = 'status-area ' + type;
+      }
+
+      function updateUI() {
+        updateToggles();
+        updatePresetButtons();
+        updateButtonStates();
+        updatePendingIndicator();
+      }
+
+      function loadSettings() {
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const data = JSON.parse(stored);
+            if (data.settings) {
+              // Merge with defaults to handle any new settings
+              settings = { ...presets.docs, ...data.settings };
+            }
+            if (data.activePreset && presets[data.activePreset]) {
+              activePreset = data.activePreset;
+            }
+            rememberSettings = true;
+          }
+        } catch (err) {
+          console.error('Failed to load settings:', err);
+        }
+      }
+
+      function saveSettings() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            settings: settings,
+            activePreset: activePreset
+          }));
+        } catch (err) {
+          console.error('Failed to save settings:', err);
+        }
+      }
+
+      function clearStorage() {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (err) {
+          console.error('Failed to clear storage:', err);
+        }
+      }
+
+      // Start
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
